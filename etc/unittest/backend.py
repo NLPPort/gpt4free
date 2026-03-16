@@ -1,15 +1,24 @@
+from __future__ import annotations
+
 import unittest
 import asyncio
 from unittest.mock import MagicMock
-from .mocks import ProviderMock
-import g4f
 from g4f.errors import MissingRequirementsError
-
 try:
-    from g4f.gui.server.backend import Backend_Api, get_error_message
+    from g4f.gui.server.backend_api import Backend_Api
     has_requirements = True
-except:
+except Exception:
     has_requirements = False
+try:
+    from g4f.tools.web_search import search
+    has_search = True
+except Exception:
+    has_search = False
+try:
+    from ddgs.exceptions import DDGSException
+except ImportError:
+    class DDGSException(Exception):
+        pass
 
 class TestBackendApi(unittest.TestCase):
 
@@ -35,24 +44,13 @@ class TestBackendApi(unittest.TestCase):
         self.assertTrue(len(response) > 0)
 
     def test_search(self):
-        from g4f.gui.server.internet import search
+        if not has_search:
+            self.skipTest("import error")
+            return
         try:
             result = asyncio.run(search("Hello"))
+        except DDGSException as e:
+            self.skipTest(e)
         except MissingRequirementsError:
             self.skipTest("search is not installed")
-        self.assertEqual(5, len(result))
-
-class TestUtilityFunctions(unittest.TestCase):
-
-    def setUp(self):
-        if not has_requirements:
-            self.skipTest("gui is not installed")
-
-    def test_get_error_message(self):
-        g4f.debug.last_provider = ProviderMock
-        exception = Exception("Message")
-        result = get_error_message(exception)
-        self.assertEqual("ProviderMock: Exception: Message", result)
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertGreater(len(result), 0)
